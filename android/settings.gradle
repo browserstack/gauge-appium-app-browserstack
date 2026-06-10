@@ -1,0 +1,16 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        mavenLocal()
+        google()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'org.gauge') {
+                useModule('org.gauge:org.gauge.gradle.plugin:1.8.2')
+            }
+        }
+    }
+}
+rootProject.name = 'gauge-appium'

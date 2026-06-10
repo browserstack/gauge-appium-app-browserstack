@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+**/build/
+gradle-app.setting
+
+# Gauge
+**/logs/
+**/log/
+**/reports/
+**/.gauge/
+local.log
+
+# BrowserStack SDK run artifacts
+**/browserstack.err
+**/bstack_build_*/
+**/gradle-m-config.json
+**/dependency-tree.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+
+# Credentials — never commit
+*.env
