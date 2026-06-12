@@ -1,0 +1,103 @@
+plugins {
+    id 'java'
+    id 'org.gauge' version '1.8.2'
+    // BrowserStack Gradle SDK plugin (latest). Declared per the BrowserStack SDK convention.
+    id 'com.browserstack.gradle-sdk' version '3.1.6'
+}
+
+apply plugin: 'com.browserstack.gradle-sdk'
+
+group 'com.browserstack'
+version '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+configurations.all {
+    resolutionStrategy {
+        eachDependency { details ->
+            if (details.requested.group == 'com.google.guava' && details.requested.name == 'guava') {
+                details.useVersion '32.1.2-jre'
+                details.because 'Align Guava across Selenium/Appium/Gauge for Java 11+'
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:32.1.2-jre'
+    // gauge-java MUST match the installed Gauge Java runner plugin version. The BrowserStack Java SDK's
+    // gauge instrumentation is validated against gauge-java 0.12.0 (the reference pin); pair it with the
+    // matching Gauge `java` runner plugin (0.12.0). A newer gauge-java (1.0.1) trips SDK error SDK-TRA-006.
+    implementation 'com.thoughtworks.gauge:gauge-java:0.12.0'
+    implementation 'org.seleniumhq.selenium:selenium-java:4.13.0'
+    implementation 'io.appium:java-client:8.6.0'
+    implementation 'com.browserstack:browserstack-local-java:1.0.6'
+    implementation 'commons-io:commons-io:2.11.0'
+    testImplementation 'org.assertj:assertj-core:3.20.2'
+
+    // BrowserStack Java SDK — provides the -javaagent that instruments the Appium driver and
+    // injects app + device capabilities from browserstack.yml. The agent is attached to the
+    // Gauge Java *runner* JVM via env/default/java.properties (gauge_jvm_args). Resolving LATEST
+    // from Maven Central also makes the jar available under ~/.m2 / the Gradle cache so the
+    // -javaagent path can point at it. See README.md.
+    // NOTE: Gradle does not understand Maven's "LATEST" keyword — use "latest.release".
+    implementation 'com.browserstack:browserstack-java-sdk:latest.release'
+}
+
+// Convenience: copy the resolved BrowserStack Java SDK jar into build/agent so env/default/java.properties
+// can reference a stable, version-independent path (build/agent/browserstack-java-sdk.jar).
+task copyBrowserStackAgent(type: Copy) {
+    description = 'Stage the BrowserStack Java SDK jar for the -javaagent on the Gauge runner JVM.'
+    from {
+        configurations.runtimeClasspath.find { it.name ==~ /browserstack-java-sdk-.*\.jar/ }
+    }
+    into "$projectDir/build/agent"
+    rename { 'browserstack-java-sdk.jar' }
+}
+
+// Helper: build a Gauge-CLI run task.
+// We invoke the Gauge CLI directly (rather than the org.gauge GaugeTask, which subclasses Gradle's
+// `Test` task and is skipped as NO-SOURCE because there are no JUnit/TestNG classes). The Gauge Java
+// runner classpath is provided explicitly via the gauge_custom_classpath env var, sourced from the
+// project's compiled test classes + full runtime dependencies. The -javaagent is wired separately on
+// the Gauge runner JVM via env/default/java.properties (gauge_jvm_args).
+def gaugeRunTask = { String taskName, String specPath, String desc ->
+    tasks.register(taskName, Exec) {
+        group = 'verification'
+        description = desc
+        dependsOn 'testClasses', 'copyBrowserStackAgent'
+        workingDir projectDir
+        doFirst {
+            def cp = sourceSets.test.runtimeClasspath.files
+                    .collect { it.absolutePath }.join(File.pathSeparator)
+            environment 'gauge_custom_classpath', cp
+            commandLine 'gauge', 'run', '--verbose', specPath
+        }
+    }
+}
+
+gaugeRunTask('runSampleTest', 'specs/bstack-specs/bstack-sample.spec',
+        'Run the WikipediaSample sample spec on BrowserStack App Automate.')
+gaugeRunTask('runLocalTest', 'specs/bstack-specs/local-test.spec',
+        'Run the LocalSample local-connection spec on BrowserStack App Automate.')
+gaugeRunTask('runTests', 'specs/bstack-specs',
+        'Run the full Gauge spec suite on BrowserStack App Automate.')
+
+// Print the test runtime classpath (compiled test classes + all runtime deps) so the Gauge CLI can
+// also be invoked manually: `export gauge_custom_classpath=$(cat build/gauge-classpath.txt); gauge run …`
+task printGaugeClasspath {
+    dependsOn 'testClasses'
+    doLast {
+        def cp = sourceSets.test.runtimeClasspath.files.collect { it.absolutePath }.join(File.pathSeparator)
+        new File("$projectDir/build/gauge-classpath.txt").text = cp
+        println "WROTE_CLASSPATH"
+    }
+}

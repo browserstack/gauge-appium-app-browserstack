@@ -1,0 +1,60 @@
+# =============================
+# Set BrowserStack Credentials
+# =============================
+# Add your BrowserStack userName and accessKey here or set BROWSERSTACK_USERNAME and
+# BROWSERSTACK_ACCESS_KEY as env variables.
+userName: YOUR_USERNAME
+accessKey: YOUR_ACCESS_KEY
+
+# ======================
+# BrowserStack Reporting
+# ======================
+projectName: BrowserStack Samples
+buildName: appauto-gauge-appium
+buildIdentifier: '#${BUILD_NUMBER}'
+# `framework` lets the BrowserStack Java SDK (javaagent) instrument the Gauge runner and report each
+# scenario's name and status to BrowserStack. The SDK's gauge instrumentation is validated against the
+# Gauge `java` runner plugin + gauge-java library 0.12.0 (see build.gradle); keep those aligned.
+framework: gauge
+
+# ======================================
+# App under test (pre-uploaded bs:// id)
+# ======================================
+# WikipediaSample.apk, already uploaded to BrowserStack App Automate.
+# To upload your own build, run:
+#   curl -u "$BROWSERSTACK_USERNAME:$BROWSERSTACK_ACCESS_KEY" \
+#     -X POST "https://api-cloud.browserstack.com/app-automate/upload" \
+#     -F "file=@/path/to/WikipediaSample.apk"
+# then replace the value below with the returned app_url (bs://...).
+app: bs://92d48b416632f2b1734259565ceab61b05ad0b24
+
+# =======================================
+# Platforms (real devices to test on)
+# =======================================
+platforms:
+  - deviceName: Samsung Galaxy S22 Ultra
+    osVersion: "12.0"
+    platformName: android
+
+# =======================
+# Parallels per Platform
+# =======================
+parallelsPerPlatform: 1
+
+# ==========================================
+# BrowserStack Local (for the local test)
+# ==========================================
+browserstackLocal: true
+
+source: gauge-appium-app-browserstack:sample-sdk:v1.0
+
+# ======================
+# Test Observability
+# ======================
+testObservability: true
+
+# ===================
+# Debugging features
+# ===================
+debug: true
+networkLogs: true
